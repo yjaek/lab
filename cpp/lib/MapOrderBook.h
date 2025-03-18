@@ -4,30 +4,14 @@
 // --------------
 // Define an order book using maps for the bids and asks.
 
+#include "lib/Order.h"
+
 #include <iostream>
 #include <iterator>
 #include <list>
 #include <map>
 #include <numeric>
 #include <unordered_map>
-
-using OrderIdT = uint32_t;
-using SizeT = uint16_t;
-using PriceT = double;
-
-enum class Side
-{
-    BID,
-    ASK
-};
-
-struct Order
-{
-    OrderIdT oid;
-    Side side;
-    PriceT price;
-    SizeT size;
-};
 
 class PriceLevelList
 {
