@@ -4,8 +4,6 @@
 // --------------
 // Define an order book using maps for the bids and asks.
 
-#include "lib/Order.h"
-
 #include <iostream>
 #include <iterator>
 #include <list>
@@ -13,6 +11,7 @@
 #include <numeric>
 #include <unordered_map>
 
+#include "lib/Order.h"
 
 class ListPriceLevel
 {
