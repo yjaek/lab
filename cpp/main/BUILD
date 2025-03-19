@@ -9,3 +9,9 @@ cc_binary(
     srcs = ["spsc_queue.cpp"],
     deps = ["//lib:spsc-queue"]
 )
+
+cc_binary(
+    name = "vector-order-book",
+    srcs = ["vector_order_book.cpp"],
+    deps = ["//lib:vector-order-book"]
+)

@@ -8,6 +8,15 @@ cc_test(
 )
 
 cc_test(
+    name = "vector-order-book",
+    srcs = ["test_vector_order_book.cpp"],
+    deps = [
+        "@googletest//:gtest_main",
+        "//lib:vector-order-book"
+    ]
+)
+
+cc_test(
     name = "map-order-book",
     srcs = ["map_order_book.cpp"],
     deps = [

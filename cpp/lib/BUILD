@@ -26,6 +26,12 @@ cc_library(
 )
 
 cc_library(
+    name = "vector-order-book",
+    hdrs = ["VectorOrderBook.h"],
+    deps = ["order"]
+)
+
+cc_library(
     name = "types",
     hdrs = ["types.h"]
 )
