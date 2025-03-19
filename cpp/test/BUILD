@@ -1,6 +1,15 @@
 cc_test(
+    name = "map-order-book",
+    srcs = ["test_map_order_book.cpp"],
+    deps = [
+        "@googletest//:gtest_main",
+        "//lib:map-order-book"
+    ]
+)
+
+cc_test(
     name = "spsc-queue",
-    srcs = ["spsc_queue.cpp"],
+    srcs = ["test_spsc_queue.cpp"],
     deps = [
         "@googletest//:gtest_main",
         "//lib:spsc-queue"
@@ -16,11 +25,3 @@ cc_test(
     ]
 )
 
-cc_test(
-    name = "map-order-book",
-    srcs = ["map_order_book.cpp"],
-    deps = [
-        "@googletest//:gtest_main",
-        "//lib:map-order-book"
-    ]
-)

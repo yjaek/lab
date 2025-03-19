@@ -1,4 +1,5 @@
 #include "gtest/gtest.h"
+
 #include "lib/SPSCQueue.h"
 
 TEST(SPSCQueueTest, PushPop)
