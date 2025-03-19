@@ -1,28 +1,26 @@
 #pragma once
 
-// MapOrderBook.h
-// --------------
-// Define an order book using maps for the bids and asks.
+// VectorOrderMap.h
+// ----------------
+// Define an order book using vectors for the bids and asks.
 
-#include <iterator>
-#include <list>
-#include <map>
+#include <algorithm>
 #include <unordered_map>
+#include <vector>
 
 #include "lib/Order.h"
 
-class ListPriceLevel
+class VectorPriceLevel
 {
-    std::list<Order> orders;
-    std::map<OrderIdT, std::list<Order>::iterator> orderIts;
+    PriceT price;
+    std::vector<Order> orders;
 
 public:
-    std::list<Order>::iterator add(const Order& order)
-    {
-        auto it = orders.insert(orders.end(), order);
-        orderIts[order.oid] = it;
-        return it;
-    }
+    VectorPriceLevel(const PriceT price) : price(price) {}
+
+    inline PriceT getPrice() const { return price; }
+
+    std::vector<Order>::iterator add(const Order& order) { return orders.insert(orders.end(), order); }
 
     std::vector<Order> match(Order& order)
     {
@@ -44,37 +42,38 @@ public:
                 const PriceT price = it->price;
                 const SizeT size = it->size;
                 it->size = 0;
-                orderIts.erase(it->oid);
-                orders.erase(it);
-                it = orders.begin();
+                ++it;
                 return {oid, price, size};
             }();
             fills.emplace_back(Order{order.oid, order.side, fillPrice, fillSize});
             fills.emplace_back(Order{fillOid, order.side, fillPrice, fillSize});
         }
+        if (orders.begin() != it)
+        {
+            orders.erase(orders.begin(), it);
+        }
         return fills;
     }
 
-    void cancel(std::list<Order>::iterator& it)
-    {
-        orderIts.erase(it->oid);
-        orders.erase(it);
-    }
+    void cancel(std::vector<Order>::iterator& it) { orders.erase(it); }
 
     bool empty() const { return orders.empty(); }
 
-    bool invalid(const OrderIdT oid) const { return orderIts.find(oid) == orderIts.end(); }
+    bool invalid(const OrderIdT oid) const
+    {
+        return std::find_if(orders.begin(), orders.end(), [&](const Order& o) { return o.oid == oid; }) == orders.end();
+    }
 
     size_t size() const { return orders.size(); }
 
-    const std::list<Order>& getOrders() const { return orders; }
+    const std::vector<Order>& getOrders() const { return orders; }
 };
 
-class MapOrderBook
+class VectorOrderBook
 {
-    std::map<PriceT, ListPriceLevel, std::greater<PriceT>> bids;
-    std::map<PriceT, ListPriceLevel, std::less<PriceT>> asks;
-    std::unordered_map<OrderIdT, std::list<Order>::iterator> orders;
+    std::vector<VectorPriceLevel> bids;
+    std::vector<VectorPriceLevel> asks;
+    std::unordered_map<OrderIdT, std::vector<Order>::iterator> orders;
 
 public:
     std::vector<Order> add(const OrderIdT oid, const std::string& side, const PriceT price, const SizeT size)
@@ -107,25 +106,14 @@ public:
         }
         auto orderIt = it->second;
         orders.erase(it);
-        if (orderIt->side == Side::BID)
+        auto& priceLevels = orderIt->side == Side::BID ? bids : asks;
+        auto levelIt = std::find_if(priceLevels.begin(),
+                                    priceLevels.end(),
+                                    [&](const VectorPriceLevel& l) { return l.getPrice() == orderIt->price; });
+        levelIt->cancel(orderIt);
+        if (levelIt->empty())
         {
-            auto levelIt = bids.find(orderIt->price);
-            ListPriceLevel& level = levelIt->second;
-            level.cancel(orderIt);
-            if (level.empty())
-            {
-                bids.erase(levelIt);
-            }
-        }
-        else
-        {
-            auto levelIt = asks.find(orderIt->price);
-            ListPriceLevel& level = levelIt->second;
-            level.cancel(orderIt);
-            if (level.empty())
-            {
-                asks.erase(levelIt);
-            }
+            priceLevels.erase(levelIt);
         }
         return true;
     }
@@ -138,31 +126,44 @@ private:
     std::vector<Order> addBid(const OrderIdT oid, const PriceT price, const SizeT size)
     {
         Order order{oid, Side::BID, price, size};
-        auto askIt = asks.begin();
+        auto levelIt = asks.rbegin();
         std::vector<Order> fills;
-        while (order.size > 0 && askIt != asks.end() && askIt->first <= price)
+        while (order.size > 0 && levelIt != asks.rend() && levelIt->getPrice() <= price)
         {
-            auto levelFills = askIt->second.match(order);
+            auto levelFills = levelIt->match(order);
             for (size_t i = 1; i < levelFills.size(); i += 2)
             {
                 const Order& fill = levelFills[i];
-                if (askIt->second.invalid(fill.oid))
+                if (levelIt->invalid(fill.oid))
                 {
                     orders.erase(fill.oid);
                 }
             }
             fills.insert(
                 fills.end(), std::make_move_iterator(levelFills.begin()), std::make_move_iterator(levelFills.end()));
-            if (askIt->second.size() == 0)
+            if (levelIt->empty())
             {
-                asks.erase(askIt);
-                askIt = asks.begin();
+                asks.erase(std::next(levelIt).base());
+                levelIt = asks.rbegin();
             }
         }
 
         if (order.size > 0)
         {
-            orders[oid] = bids[price].add(order);
+            auto rit = bids.rbegin();
+            while (rit != bids.rend() && rit->getPrice() > price)
+            {
+                ++rit;
+            }
+            if (rit == bids.rend() || rit->getPrice() < price)
+            {
+                auto it = bids.emplace(rit.base(), price);
+                orders[oid] = it->add(order);
+            }
+            else
+            {
+                orders[oid] = rit->add(order);
+            }
         }
 
         return fills;
@@ -171,31 +172,44 @@ private:
     std::vector<Order> addAsk(const OrderIdT oid, const PriceT price, const SizeT size)
     {
         Order order{oid, Side::ASK, price, size};
-        auto bidIt = bids.begin();
+        auto levelIt = bids.rbegin();
         std::vector<Order> fills;
-        while (order.size > 0 && bidIt != bids.end() && bidIt->first >= price)
+        while (order.size > 0 && levelIt != bids.rend() && levelIt->getPrice() >= price)
         {
-            auto levelFills = bidIt->second.match(order);
+            auto levelFills = levelIt->match(order);
             for (size_t i = 1; i < levelFills.size(); i += 2)
             {
                 const Order& fill = levelFills[i];
-                if (bidIt->second.invalid(fill.oid))
+                if (levelIt->invalid(fill.oid))
                 {
                     orders.erase(fill.oid);
                 }
             }
             fills.insert(
                 fills.end(), std::make_move_iterator(levelFills.begin()), std::make_move_iterator(levelFills.end()));
-            if (bidIt->second.size() == 0)
+            if (levelIt->empty())
             {
-                bids.erase(bidIt);
-                bidIt = bids.begin();
+                bids.erase(std::next(levelIt).base());
+                levelIt = bids.rbegin();
             }
         }
 
         if (order.size > 0)
         {
-            orders[oid] = asks[price].add(order);
+            auto rit = asks.rbegin();
+            while (rit != asks.rend() && rit->getPrice() < price)
+            {
+                ++rit;
+            }
+            if (rit == asks.rend() || rit->getPrice() > price)
+            {
+                auto it = asks.emplace(rit.base(), price);
+                orders[oid] = it->add(order);
+            }
+            else
+            {
+                orders[oid] = rit->add(order);
+            }
         }
 
         return fills;
