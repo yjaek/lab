@@ -1,4 +1,10 @@
 cc_binary(
+    name = "linear-probing-hash-set",
+    srcs = ["linear_probing_hash_set.cpp"],
+    deps = ["//lib:linear-probing-hash-set"]
+)
+
+cc_binary(
     name = "map-order-book",
     srcs = ["map_order_book.cpp"],
     deps = ["//lib:map-order-book"]
