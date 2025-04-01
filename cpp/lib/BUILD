@@ -1,5 +1,11 @@
 package(default_visibility = ["//visibility:public"])
 
+
+cc_library(
+    name = "linear-probing-hash-set",
+    hdrs = ["LinearProbingHashSet.h"],
+)
+
 cc_library(
     name = "map-order-book",
     hdrs = ["MapOrderBook.h"],
