@@ -27,6 +27,11 @@ cc_library(
 )
 
 cc_library(
+    name = "shared-ptr",
+    hdrs = ["SharedPtr.h"]
+)
+
+cc_library(
     name = "spsc-queue",
     hdrs = ["SPSCQueue.h"]
 )
