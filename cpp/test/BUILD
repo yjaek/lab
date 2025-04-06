@@ -17,6 +17,15 @@ cc_test(
 )
 
 cc_test(
+    name = "shared-ptr",
+    srcs = ["test_shared_ptr.cpp"],
+    deps = [
+        "@googletest//:gtest_main",
+        "//lib:shared-ptr"
+    ]
+)
+
+cc_test(
     name = "spsc-queue",
     srcs = ["test_spsc_queue.cpp"],
     deps = [
