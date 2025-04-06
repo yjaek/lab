@@ -51,7 +51,7 @@ public:
         return *this;
     }
 
-    T operator*() const { return *ptr; }
+    T& operator*() const { return *ptr; }
 
     T* operator->() const { return ptr; }
 

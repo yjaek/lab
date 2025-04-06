@@ -15,11 +15,14 @@ public:
     int getInt() const { return b; }
 };
 
-TEST(SharedPtrTest, Construct)
+TEST(SharedPtrTest, DefaultConstruct)
 {
     SharedPtr<int> a;
     EXPECT_EQ(a.get(), nullptr);
+}
 
+TEST(SharedPtrTest, Construct)
+{
     SharedPtr<int> b{new int{15}};
     EXPECT_NE(b.get(), nullptr);
     EXPECT_EQ(*b, 15);
@@ -40,7 +43,6 @@ TEST(SharedPtrTest, MoveConstructAndAssign)
 {
     SharedPtr<int> a{new int{1}};
     EXPECT_NE(a.get(), nullptr);
-
     auto* underlying = a.get();
     SharedPtr<int> b{std::move(a)};
     EXPECT_EQ(a.get(), nullptr);
